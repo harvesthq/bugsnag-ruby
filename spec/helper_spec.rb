@@ -145,6 +145,39 @@ describe Bugsnag::Helpers do
 
           expect(::JSON.dump(trimmed_value).length).to be < Bugsnag::Helpers::MAX_PAYLOAD_LENGTH
         end
+
+        it "does not remove entire events" do
+          value = {
+            events: [{
+              app: {},
+              context: {},
+              metaData: {},
+              exceptions: (0..2).map do
+                {
+                  stacktrace: (0..200).map do
+                    {
+                      inProject: true,
+                      lineNumber: 305,
+                      code: {
+                        302 => "",
+                        303 => "      # Executes the SQL statement in the context of this connection.",
+                        304 => "      def execute(sql, name = nil)",
+                        305 => "        log(sql, name) { @connection.query(sql) }",
+                        306 => "      end",
+                        307 => "",
+                        308 => "      # MysqlAdapter has to free a result after using it, so we use this method to write"
+                      },
+                      file: ".bundle/gems/activerecord-4.2.5.2/lib/active_record/connection_adapters/abstract_mysql_adapter.rb",
+                      method: "query"
+                    }
+                  end
+                }
+              end
+            }]
+          }
+          trimmed_value = Bugsnag::Helpers.trim_if_needed(value)
+          expect(trimmed_value[:events].size).to eq(1)
+        end
       end
     end
   end
